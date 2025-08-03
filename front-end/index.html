@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microservices Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <h1 class="text-4xl font-bold text-center mb-8 text-gray-700">Microservices App</h1>
+
+        <!-- Status Message Box -->
+        <div id="status-box" class="hidden p-4 mb-6 rounded-md text-center font-medium"></div>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Registration Card -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">Register New User</h2>
+                <form id="register-form" class="space-y-4">
+                    <input type="text" id="reg-username" placeholder="Username" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="reg-password" placeholder="Password" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="reg-fullname" placeholder="Full Name" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="email" id="reg-email" placeholder="Email" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">Register</button>
+                </form>
+            </div>
+
+            <!-- Login Card -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">Login</h2>
+                <form id="login-form" class="space-y-4">
+                    <input type="text" id="login-username" placeholder="Username" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <input type="password" id="login-password" placeholder="Password" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition-colors">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Protected Action Card -->
+        <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+            <h2 class="text-2xl font-semibold mb-4">Get Greeting</h2>
+            <p class="mb-4 text-gray-600">You must be logged in to use this feature. The JWT token will be automatically stored and sent.</p>
+            <button id="greet-button" class="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors">Get Protected Greeting</button>
+            <div id="greeting-result" class="mt-4 p-4 bg-gray-50 rounded-md text-center font-semibold text-lg hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('register-form');
+        const loginForm = document.getElementById('login-form');
+        const greetButton = document.getElementById('greet-button');
+        const statusBox = document.getElementById('status-box');
+        const greetingResult = document.getElementById('greeting-result');
+
+        // Use the ports you mapped in docker-compose.yml
+        const AUTH_API_URL = 'http://localhost:8082'; // Or 8082 if you have a port conflict
+        const GREETER_API_URL = 'http://localhost:8081';
+
+        let jwtToken = null;
+
+        function showStatus(message, isError = false) {
+            statusBox.textContent = message;
+            statusBox.className = 'p-4 mb-6 rounded-md text-center font-medium'; // Reset classes
+            statusBox.classList.add(isError ? 'bg-red-200' : 'bg-green-200', isError ? 'text-red-800' : 'text-green-800');
+            statusBox.classList.remove('hidden');
+        }
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-fullname').value;
+            const email = document.getElementById('reg-email').value;
+
+            try {
+                const response = await fetch(`${AUTH_API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, full_name: fullName, email })
+                });
+
+                if (response.status === 201) {
+                    showStatus('Registration successful! You can now log in.');
+                    registerForm.reset();
+                } else {
+                    const text = await response.text();
+                    throw new Error(`Registration failed: ${text}`);
+                }
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${AUTH_API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    jwtToken = data.token;
+                    showStatus('Login successful! Token stored.');
+                    loginForm.reset();
+                } else {
+                    throw new Error('Login failed: Invalid username or password.');
+                }
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+
+        greetButton.addEventListener('click', async () => {
+            if (!jwtToken) {
+                showStatus('You must log in first!', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${GREETER_API_URL}/greet`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const greeting = await response.text();
+                    greetingResult.textContent = greeting;
+                    greetingResult.classList.remove('hidden');
+                    showStatus('Greeting received successfully!');
+                } else {
+                    throw new Error('Failed to get greeting. Your token might be expired.');
+                }
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+    </script>
+</body>
+</html>

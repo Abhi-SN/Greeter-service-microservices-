@@ -1,0 +1,143 @@
+Here is a flow diagram that describes the complete architecture of the project we've built, including the frontend service and the Gin-powered `greeter-service`.
+
+### **Part 1: User Registration Flow**
+
+This is how a new user is created in the system, starting from the web browser.
+
+```
+[User in Browser at localhost:3000]
+      |
+      | 1. Fills out and submits the registration form.
+      v
+[Frontend Service (JavaScript)]
+      |
+      | 2. Sends POST request to /register at localhost:8082 with {username, password, full_name, email}.
+      v
+[Auth-Service]
+      |
+      | 3. Receives request, hashes password.
+      |
+      | 4. Inserts {username, hashed_password} into the 'users' table in the database.
+      |
+      | 5. Sends POST request to the internal user-service with {username, full_name, email}.
+      v
+[User-Service]
+      |
+      | 6. Receives request from auth-service.
+      |
+      | 7. Inserts the profile data into the 'user_profiles' table in the database.
+      |
+      | 8. Responds with success to the auth-service.
+      v
+[Auth-Service]
+      |
+      | 9. Responds with "201 Created" success back to the frontend.
+      v
+[Frontend Service]
+      |
+      | 10. Displays "Registration successful!" message to the user.
+```
+
+-----
+
+### **Part 2: Login & Token Retrieval Flow**
+
+This is how a registered user gets their authentication token.
+
+```
+[User in Browser at localhost:3000]
+      |
+      | 1. Submits the login form.
+      v
+[Frontend Service (JavaScript)]
+      |
+      | 2. Sends POST request to /login at localhost:8082 with {username, password}.
+      v
+[Auth-Service]
+      |
+      | 3. Fetches user's hashed password from the 'users' table in the database.
+      |
+      | 4. Compares the provided password with the stored hash.
+      |
+      | 5. If they match, creates and signs a new JSON Web Token (JWT).
+      |
+      | 6. Sends the JWT back in the response.
+      v
+[Frontend Service]
+      |
+      | 7. Receives the JWT and stores it in a JavaScript variable for later use.
+      |
+      | 8. Displays "Login successful!" message.
+```
+
+-----
+
+### **Part 3: Protected Greeting Flow**
+
+This shows how the frontend uses the token to access the protected `greeter-service`.
+
+```
+[User in Browser at localhost:3000]
+      |
+      | 1. Clicks the "Get Protected Greeting" button.
+      v
+[Frontend Service (JavaScript)]
+      |
+      | 2. Sends GET request to /greet at localhost:8081.
+      |    (Crucially, it includes the stored JWT in the 'Authorization: Bearer <token>' header).
+      v
+[Greeter-Service (using Gin)]
+      |
+      | 3. Gin's CORS middleware allows the request.
+      |
+      | 4. The greetHandler extracts and validates the JWT.
+      |
+      | 5. If valid, it extracts the username from the token.
+      |
+      | 6. Sends a GET request to the internal user-service to get the user's profile.
+      v
+[User-Service]
+      |
+      | 7. Fetches the user's full_name from the 'user_profiles' table in the database.
+      |
+      | 8. Returns the profile data to the greeter-service.
+      v
+[Greeter-Service (using Gin)]
+      |
+      | 9. Constructs the personalized greeting message (e.g., "Hello, Postman Pat!").
+      |
+      | 10. Sends the greeting string back to the frontend.
+      v
+[Frontend Service]
+      |
+      | 11. Displays the received greeting on the web page
+
+
+
+Dict Structure
+Micro-Service-project/
+│
+├── 📂 auth-service/
+│   ├── go.mod
+│   ├── go.sum
+│   ├── main.go
+│   └── Dockerfile
+│
+├── 📂 greeter-service/
+│   ├── go.mod
+│   ├── go.sum
+│   ├── main.go
+│   └── Dockerfile
+│
+├── 📂 user-service/
+│   ├── go.mod
+│   ├── go.sum
+│   ├── main.go
+│   └── Dockerfile
+│
+├── 📂 frontend/
+│   ├── index.html
+│   ├── nginx.conf      
+│   └── Dockerfile
+│
+└── 📜 docker-compose.yml

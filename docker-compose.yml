@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 1. The PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydb
+
+ # 2. The Authentication Service
+  auth-service:
+    build: ./auth-service
+    restart: always
+    ports:
+      - "8082:8080"
+    depends_on:
+      - db
+
+ # 3. the  user profile service
+  user-service:
+    build: ./user-service
+    restart: always
+    depends_on:
+      - db
+  # 4. The Greeter Service
+  greeter-service:
+    build: ./greeter-service
+    restart: always
+    ports:
+      - "8081:8080" # Exposes the greeter service on host port 8081
+    depends_on:
+      - user-service # Greeter now depends on the user service
+
+
+  frontend:
+    build: ./front-end
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - greeter-service
+
+
+
+# Defines the named volume for data persistence
+volumes:
+  postgres-data:
+
+
