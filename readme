@@ -1,7 +1,6 @@
 # Full-Stack Go Microservices Application
 
-This project is a fully containerized, end-to-end microservices architecture built with Go. It demonstrates secure authentication, user profiles, and a personalized "greeter" service. 
-All services are orchestrated using Docker Compose and use PostgreSQL for persistence. The frontend, based on Nginx and JavaScript, provides a simple web interface to interact with the system.
+This project is a fully containerized, end-to-end microservices architecture built with Go. It demonstrates secure authentication, user profiles, and a personalized "greeter" service. All services are orchestrated using Docker Compose and use PostgreSQL for persistence. The frontend, based on Nginx and JavaScript, provides a simple web interface to interact with the system.
 
 ## 🚀 Features
 
@@ -180,3 +179,6 @@ curl -X GET http://localhost:8081/greet \
 -H "Authorization: Bearer "
 ```
 
+
+
+PRs and issues welcome!
