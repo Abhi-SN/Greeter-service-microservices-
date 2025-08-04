@@ -1,184 +1,113 @@
+
 # Full-Stack Go Microservices Application
 
-This project is a fully containerized, end-to-end microservices architecture built with Go. It demonstrates secure authentication, user profiles, and a personalized "greeter" service. All services are orchestrated using Docker Compose and use PostgreSQL for persistence. The frontend, based on Nginx and JavaScript, provides a simple web interface to interact with the system.
+A containerized full-stack microservice architecture built with Go, featuring secure authentication, user profiles, a protected "greeter" service, a shared PostgreSQL database, and a simple frontend. This project demonstrates modern RESTful backend design, JWT security, and agnostic service-to-service communication.
 
-## 🚀 Features
+## Features
 
-- **Authentication Service** - Secure registration and login, JWT token issuance
-- **User Service** - User profile management
-- **Greeter Service** - Protected greeting using validated user identity
-- **PostgreSQL** - Central relational database for users and profiles
-- **JWT-based Security** - Safe authentication and authorization between services
-- **Dockerized** - All components containerized, easy to run locally or deploy
-- **Simple Frontend** - Clean UI for registration, login, and greeting retrieval
+- **Authentication Service:** User registration & login, JWT token issuance.
+- **User Service:** Stores and retrieves user profile information.
+- **Greeter Service:** Returns protected, personalized greetings.
+- **Frontend:** Clean SPA for form submissions and secure interaction.
+- **Persistence:** PostgreSQL database for users and profiles.
+- **Security:** JWT-based auth, CORS controlled.
+- **Dockerized:** All components containerized and managed via Docker Compose.
 
-## 🧩 Architecture Diagram
 
-```
-[Frontend]
-  |   \
-  |    -----> [Auth Service] --(writes to)--> [PostgreSQL DB]
-  |              |               \
-  |              |                ---> [User Service] --(reads/writes to)--> [PostgreSQL DB]
-  |              |
-  |               \----> [Greeter Service] ----> [User Service]
-  |                                   |
- (Sends JWT for Authorization)        |
-                                      \
-                                         (Obtains Profile Data)
-```
 
-## 🗂 Directory Structure
+## Directory Structure
 
 ```
 integrated-project/
-│
 ├── auth-service/
 │   ├── main.go
 │   └── Dockerfile
-│
 ├── greeter-service/
 │   ├── main.go
 │   └── Dockerfile
-│
 ├── user-service/
 │   ├── main.go
 │   └── Dockerfile
-│
 ├── frontend/
 │   ├── index.html
 │   ├── nginx.conf
 │   └── Dockerfile
-│
 └── docker-compose.yml
 ```
 
-## 🛠 Prerequisites
+## Prerequisites
 
-- **Go** (1.22+)
+- **Go** 1.22 or later
 - **Docker & Docker Compose**
 
-## 🚦 How to Run the Application
+## Getting Started
 
-1. **Clone this repository** and navigate to the project root.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/integrated-project.git
+   cd integrated-project
+   ```
 
-2. **Initialize dependencies** for each Go service:
-    ```bash
-    cd auth-service && go mod tidy
-    cd ../user-service && go mod tidy
-    cd ../greeter-service && go mod tidy
-    ```
+2. **Install Go dependencies:**
+   ```bash
+   cd auth-service && go mod tidy
+   cd ../user-service && go mod tidy
+   cd ../greeter-service && go mod tidy
+   ```
 
-3. **Build and run all containers:**
-    ```bash
-    docker-compose up --build
-    ```
-   This launches PostgreSQL, the three Go microservices, and the Nginx-based frontend.
+3. **Build and start services:**
+   ```bash
+   docker-compose up --build
+   ```
 
-4. **Visit the app in your browser:**
-    ```
-    http://localhost:3000
-    ```
+4. **Open in browser:**
+   ```
+   http://localhost:3000
+   ```
 
-## 🧑💻 How to Use
+## Usage
 
-### Using the Web Frontend
+### Via the Web Frontend
+- **Register:** Complete the registration form, then click "Register".
+- **Login:** Enter credentials, click "Login".
+- **Get Greeting:** Click "Get Protected Greeting" after logging in.
 
-- **Register:** Complete the form with username, password, full name, and email. Click "Register".
-- **Login:** Enter credentials to retrieve your JWT. A success message confirms storage of the token.
-- **Get Greeting:** Click "Get Protected Greeting" — the frontend fetches a personalized greeting using your JWT.
-
-### Using Postman or cURL
-
+### Via API (Postman/cURL)
 - **Register:**  
-  `POST http://localhost:8080/register` with JSON body:
+  `POST http://localhost:8080/register`  
+  Body:  
   ```json
   {
-    "username": "youruser",
-    "password": "yourpass",
+    "username": "xyz",
+    "password": "abc",
     "full_name": "Your Name",
-    "email": "youremail@example.com"
+    "email": "you@example.com"
   }
   ```
-
 - **Login:**  
-  `POST http://localhost:8080/login` with JSON:
+  `POST http://localhost:8080/login`  
   ```json
   {
-    "username": "youruser",
-    "password": "yourpass"
+    "username": "xyz",
+    "password": "abc"
   }
   ```
-
 - **Get Greeting:**  
   `GET http://localhost:8081/greet`  
-  Add header:  
-  `Authorization: Bearer `
+  Header: `Authorization: Bearer `
 
-## 🏗 Architecture Flow
+## Flows
 
-### 1. User Registration
+### Registration
 
-```
-[Browser] → [Frontend] → [Auth-Service] → [PostgreSQL DB]
-                     ↘
-                      [User-Service] → [PostgreSQL DB]
-```
-- **1.** User submits form on frontend.
-- **2.** Frontend issues POST to `/register` on Auth-Service.
-- **3.** Auth-Service hashes password, stores credentials in DB.
-- **4.** Auth-Service posts profile data to User-Service.
-- **5.** User-Service writes profile to DB.
+1. Browser sends data → frontend → auth-service → inserts to DB → notifies user-service for profile → profile stored in DB.
 
-### 2. Login & JWT Retrieval
+### Login
 
-```
-[Browser] → [Frontend] → [Auth-Service] → [PostgreSQL DB] → [Frontend]
-```
-- **1.** User submits login form.
-- **2.** Frontend posts data to `/login`.
-- **3.** Auth-Service verifies credentials, issues JWT.
-- **4.** Frontend stores JWT for future requests.
+1. Browser submits credentials → frontend → auth-service → verifies in DB → returns JWT.
 
-### 3. Protected Greeting
+### Protected Greeting
 
-```
-[Browser] → [Frontend] → [Greeter-Service] (JWT)
-                     ↘
-                      [User-Service] → [PostgreSQL DB]
-```
-- **1.** User clicks "Get Greeting".
-- **2.** Frontend GETs `/greet` with JWT to Greeter-Service.
-- **3.** Greeter-Service verifies JWT, extracts username.
-- **4.** Greeter-Service requests profile from User-Service.
-- **5.** User-Service fetches profile from DB.
-- **6.** Greeter-Service composes personalized greeting.
-
-## 📂 Example Requests
-
-#### Register User
-
-```bash
-curl -X POST http://localhost:8080/register \
--H "Content-Type: application/json" \
--d '{"username":"johndoe", "password":"secret", "full_name":"John Doe", "email":"john@example.com"}'
-```
-
-#### Login
-
-```bash
-curl -X POST http://localhost:8080/login \
--H "Content-Type: application/json" \
--d '{"username":"johndoe", "password":"secret"}'
-```
-
-#### Get Protected Greeting (replace ``)
-
-```bash
-curl -X GET http://localhost:8081/greet \
--H "Authorization: Bearer "
-```
+1. Browser requests greeting (JWT provided) → frontend → greeter-service → JWT validated → username extracted → greeter-service calls user-service → user profile returned → greeting constructed and returned to frontend.
 
 
-
-PRs and issues welcome!
